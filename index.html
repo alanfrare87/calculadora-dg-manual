@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de DG Manual</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;color:#17202a}
+.container{max-width:620px;margin:0 auto;padding:24px 16px}
+.card{background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+h1{margin:0 0 6px;font-size:28px}
+.subtitle{margin:0 0 24px;color:#667085}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-weight:700;margin-bottom:7px}
+input{width:100%;padding:14px;border:1px solid #d0d5dd;border-radius:12px;font-size:17px;outline:none}
+input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.hint{font-size:12px;color:#667085;margin-top:5px}
+.buttons{display:flex;gap:10px;margin-top:20px}
+button{flex:1;padding:14px;border:0;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+.primary{background:#2563eb;color:white}
+.secondary{background:#eef2f6;color:#17202a}
+.result{margin-top:22px;padding:20px;border-radius:16px;background:#f8fafc;text-align:center;border:1px solid #e4e7ec}
+.result-label{font-size:13px;font-weight:700;color:#667085;text-transform:uppercase}
+.result-value{font-size:36px;font-weight:800;margin-top:8px}
+.message{font-size:13px;color:#667085;margin-top:8px}
+.formula{margin-top:20px;padding:14px;border-radius:12px;background:#f8fafc;font-size:13px;color:#475467;line-height:1.5}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.container{padding:16px}.card{padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="card">
+<h1>Calculadora de DG Manual</h1>
+<p class="subtitle">Informe os 4 valores e veja o resultado automaticamente.</p>
+
+<form id="form">
+<div class="grid">
+<div>
+<label for="precoFinal">Preço Final</label>
+<input id="precoFinal" inputmode="decimal" placeholder="Ex.: 80,00">
+<div class="hint">Valor em R$</div>
+</div>
+
+<div>
+<label for="precoBase">Preço Base</label>
+<input id="precoBase" inputmode="decimal" placeholder="Ex.: 100,00">
+<div class="hint">Valor em R$</div>
+</div>
+
+<div>
+<label for="negociacoes">Negociações Somadas</label>
+<input id="negociacoes" inputmode="decimal" placeholder="Ex.: 10%">
+<div class="hint">Informe em %</div>
+</div>
+
+<div>
+<label for="escolhaCerta">Escolha Certa</label>
+<input id="escolhaCerta" inputmode="decimal" placeholder="Ex.: 5%">
+<div class="hint">Informe em %</div>
+</div>
+</div>
+
+<div class="buttons">
+<button class="primary" type="submit">CALCULAR</button>
+<button class="secondary" type="button" id="limpar">LIMPAR</button>
+</div>
+</form>
+
+<div class="result" aria-live="polite">
+<div class="result-label">Resultado</div>
+<div class="result-value" id="resultado">—</div>
+<div class="message" id="mensagem">Preencha os campos para calcular.</div>
+</div>
+
+<div class="formula">
+<strong>Fórmula utilizada:</strong><br>
+1 − (((Preço Final ÷ (1 − Negociações Somadas)) ÷ (1 − Escolha Certa)) ÷ Preço Base)
+</div>
+</div>
+</div>
+
+<script>
+const ids=["precoFinal","precoBase","negociacoes","escolhaCerta"];
+
+function parseValor(valor, percentual=false){
+  let s=String(valor||"").trim().replace(/R\$\s?/gi,"").replace(/\s/g,"");
+  if(!s)return null;
+  if(s.includes(",") && s.includes(".")) s=s.replace(/\./g,"").replace(",",".");
+  else if(s.includes(",")) s=s.replace(",",".");
+  if(percentual && s.endsWith("%")) s=s.slice(0,-1);
+  const n=Number(s);
+  if(!Number.isFinite(n))return null;
+  return percentual?n/100:n;
+}
+
+function calcular(){
+  const pFinal=parseValor(document.getElementById("precoFinal").value);
+  const pBase=parseValor(document.getElementById("precoBase").value);
+  const negociacoes=parseValor(document.getElementById("negociacoes").value,true);
+  const escolha=parseValor(document.getElementById("escolhaCerta").value,true);
+  const resultado=document.getElementById("resultado");
+  const mensagem=document.getElementById("mensagem");
+
+  if([pFinal,pBase,negociacoes,escolha].some(v=>v===null)){
+    resultado.textContent="—";
+    mensagem.textContent="Preencha os 4 campos com valores válidos.";
+    return;
+  }
+  if(pBase===0 || 1-negociacoes===0 || 1-escolha===0){
+    resultado.textContent="—";
+    mensagem.textContent="Verifique os valores: a fórmula não pode dividir por zero.";
+    return;
+  }
+
+  const r=1-((pFinal/(1-negociacoes))/(1-escolha)/pBase);
+  if(!Number.isFinite(r)){
+    resultado.textContent="—";
+    mensagem.textContent="Não foi possível calcular com esses valores.";
+    return;
+  }
+
+  resultado.textContent=(r*100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+  mensagem.textContent="Cálculo realizado com sucesso.";
+}
+
+document.getElementById("form").addEventListener("submit",e=>{
+  e.preventDefault();
+  calcular();
+});
+
+document.getElementById("limpar").addEventListener("click",()=>{
+  ids.forEach(id=>document.getElementById(id).value="");
+  document.getElementById("resultado").textContent="—";
+  document.getElementById("mensagem").textContent="Preencha os campos para calcular.";
+  document.getElementById("precoFinal").focus();
+});
+
+ids.forEach(id=>document.getElementById(id).addEventListener("input",calcular));
+</script>
+</body>
+</html>
